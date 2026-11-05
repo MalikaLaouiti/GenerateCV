@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Générateur de CV interactif</title>
+  <meta name="description" content="Remplissez le formulaire et obtenez votre CV en ligne, prêt à imprimer ou à exporter en PDF.">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="stylesheet" href="style.css">
+  <script>try{document.documentElement.dataset.theme=localStorage.getItem("cv-theme")||(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light")}catch(e){}</script>
+</head>
+<body>
+  <a class="skip-link" href="#apercu">Aller à l'aperçu du CV</a>
+
+  <header class="app-bar">
+    <p class="brand"><i class="fa-solid fa-file-lines" aria-hidden="true"></i><span>Générateur de CV</span></p>
+    <div class="app-bar__actions">
+      <button type="button" class="btn btn--ghost" data-action="theme" aria-label="Basculer entre thème clair et sombre"><i class="fa-solid fa-moon theme-moon" aria-hidden="true"></i><i class="fa-solid fa-sun theme-sun" aria-hidden="true"></i></button>
+      <button name="reset" type="reset" class="btn btn--ghost" data-action="reset"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i><span>Réinitialiser</span></button>
+      <button name="print" type="submit" class="btn btn--primary" data-action="print"><i class="fa-solid fa-print" aria-hidden="true"></i><span>Imprimer / PDF</span></button>
+    </div>
+  </header>
+
+  <!-- Onglets mobile (CSS seul : boutons radio) -->
+  <input class="tab-radio" type="radio" name="vue" id="vue-form" checked aria-label="Afficher le formulaire">
+  <input class="tab-radio" type="radio" name="vue" id="vue-apercu" aria-label="Afficher l'aperçu du CV">
+  <div class="tabs" aria-hidden="true">
+    <label for="vue-form"><i class="fa-solid fa-pen-to-square"></i>Formulaire</label>
+    <label for="vue-apercu"><i class="fa-solid fa-eye"></i>Aperçu</label>
+  </div>
+
+  <div class="app">
+
+    <!-- ================= FORMULAIRE (gauche) ================= -->
+    <aside class="editor" aria-label="Formulaire de saisie du CV">
+      <form id="cv-form" autocomplete="off" novalidate>
+
+        <fieldset class="panel">
+          <legend><i class="fa-solid fa-user" aria-hidden="true"></i>Profil</legend>
+          <label class="field"><span>Photo de profil</span><input type="file" accept="image/*" data-field="photo"></label>
+          <div class="row">
+            <label class="field"><span>Nom et prénom</span><input type="text" data-field="nom" placeholder="Ex. Flen Ben Flen"></label>
+            <label class="field"><span>Titre / spécialité</span><input type="text" data-field="specialite" placeholder="Ex. Ingénieur "></label>
+          </div>
+          <label class="field"><span>Présentation</span><textarea rows="4" data-field="presentation" placeholder="Quelques lignes sur votre parcours et vos objectifs"></textarea></label>
+        </fieldset>
+
+        <fieldset class="panel">
+          <legend><i class="fa-solid fa-address-book" aria-hidden="true"></i>Coordonnées</legend>
+          <div class="row">
+            <label class="field"><span>E-mail</span><input type="email" data-field="email" placeholder="prenom.nom@exemple.com"></label>
+            <label class="field"><span>Téléphone</span><input type="tel" data-field="telephone" placeholder="+000 00 000 000"></label>
+          </div>
+          <label class="field"><span>Ville, pays</span><input type="text" data-field="ville" placeholder="Ex. Monastir, Tunisie"></label>
+          <label class="field"><span>LinkedIn (URL)</span><input type="url" data-field="linkedin" placeholder="https://www.linkedin.com/in/…"></label>
+          <label class="field"><span>GitHub (URL)</span><input type="url" data-field="github" placeholder="https://github.com/…"></label>
+          <label class="field"><span>Portfolio (URL)</span><input type="url" data-field="portfolio" placeholder="https://…"></label>
+        </fieldset>
+
+        <fieldset class="panel">
+          <legend><i class="fa-solid fa-code" aria-hidden="true"></i>Compétences</legend>
+          <p class="hint">Séparez les éléments par des virgules. Niveau facultatif en % : « Python:80 » affiche une barre.</p>
+          <label class="field"><span>Compétences techniques</span><input type="text" data-field="competences-techniques" placeholder="Ex. Algorithmique, Réseaux"></label>
+          <label class="field"><span>Langages de programmation</span><input type="text" data-field="langages" placeholder="Ex. HTML:90, CSS:80, Python:70"></label>
+          <label class="field"><span>Frameworks et outils</span><input type="text" data-field="outils" placeholder="Ex. Git, VS Code"></label>
+          <label class="field"><span>Bases de données</span><input type="text" data-field="bases" placeholder="Ex. MySQL, MongoDB"></label>
+          <label class="field"><span>Compétences transversales</span><input type="text" data-field="transversales" placeholder="Ex. Travail d'équipe, Autonomie"></label>
+          <label class="field"><span>Langues</span><input type="text" data-field="langues" placeholder="Ex. Français (courant), Anglais (B2)"></label>
+          <label class="field"><span>Autres compétences (libres)</span><input type="text" data-field="autres" placeholder="Ex. Figma, Docker, Gestion de projet"></label>
+        </fieldset>
+
+        <fieldset class="panel" data-list="experiences">
+          <legend><i class="fa-solid fa-briefcase" aria-hidden="true"></i>Expériences professionnelles</legend>
+          <details class="entry" open>
+            <summary>Expérience 1</summary>
+            <div class="row">
+              <label class="field"><span>Poste</span><input type="text" data-field="poste"></label>
+              <label class="field"><span>Entreprise</span><input type="text" data-field="entreprise"></label>
+            </div>
+            <div class="row">
+              <label class="field"><span>Période</span><input type="text" data-field="periode" placeholder="Mois/Année – Mois/Année"></label>
+              <label class="field"><span>Lieu</span><input type="text" data-field="lieu"></label>
+            </div>
+            <label class="field"><span>Missions</span><textarea rows="3" data-field="description"></textarea></label>
+            <label class="field"><span>Réalisations</span><textarea rows="2" data-field="realisations"></textarea></label>
+            <button type="button" class="btn btn--danger btn--sm" data-action="remove"><i class="fa-solid fa-trash" aria-hidden="true"></i>Supprimer</button>
+          </details>
+          <details class="entry">
+            <summary>Expérience 2</summary>
+            <div class="row">
+              <label class="field"><span>Poste</span><input type="text" data-field="poste"></label>
+              <label class="field"><span>Entreprise</span><input type="text" data-field="entreprise"></label>
+            </div>
+            <div class="row">
+              <label class="field"><span>Période</span><input type="text" data-field="periode" placeholder="Mois/Année – Mois/Année"></label>
+              <label class="field"><span>Lieu</span><input type="text" data-field="lieu"></label>
+            </div>
+            <label class="field"><span>Missions</span><textarea rows="3" data-field="description"></textarea></label>
+            <label class="field"><span>Réalisations</span><textarea rows="2" data-field="realisations"></textarea></label>
+            <button type="button" class="btn btn--danger btn--sm" data-action="remove"><i class="fa-solid fa-trash" aria-hidden="true"></i>Supprimer</button>
+          </details>
+          <button type="button" class="btn btn--add" data-action="add" data-target="experiences"><i class="fa-solid fa-plus" aria-hidden="true"></i>Ajouter une expérience</button>
+        </fieldset>
+
+        <fieldset class="panel" data-list="formations">
+          <legend><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>Formations</legend>
+          <details class="entry" open>
+            <summary>Formation 1</summary>
+            <label class="field"><span>Diplôme / formation</span><input type="text" data-field="diplome"></label>
+            <div class="row">
+              <label class="field"><span>Établissement</span><input type="text" data-field="etablissement"></label>
+              <label class="field"><span>Ville</span><input type="text" data-field="ville-formation"></label>
+            </div>
+            <label class="field"><span>Années</span><input type="text" data-field="annees" placeholder="Début – Fin"></label>
+            <label class="field"><span>Description / spécialisation</span><textarea rows="2" data-field="description"></textarea></label>
+            <button type="button" class="btn btn--danger btn--sm" data-action="remove"><i class="fa-solid fa-trash" aria-hidden="true"></i>Supprimer</button>
+          </details>
+          <details class="entry">
+            <summary>Formation 2</summary>
+            <label class="field"><span>Diplôme / formation</span><input type="text" data-field="diplome"></label>
+            <div class="row">
+              <label class="field"><span>Établissement</span><input type="text" data-field="etablissement"></label>
+              <label class="field"><span>Ville</span><input type="text" data-field="ville-formation"></label>
+            </div>
+            <label class="field"><span>Années</span><input type="text" data-field="annees" placeholder="Début – Fin"></label>
+            <label class="field"><span>Description / spécialisation</span><textarea rows="2" data-field="description"></textarea></label>
+            <button type="button" class="btn btn--danger btn--sm" data-action="remove"><i class="fa-solid fa-trash" aria-hidden="true"></i>Supprimer</button>
+          </details>
+          <button type="button" class="btn btn--add" data-action="add" data-target="formations"><i class="fa-solid fa-plus" aria-hidden="true"></i>Ajouter une formation</button>
+        </fieldset>
+
+        <fieldset class="panel" data-list="projets">
+          <legend><i class="fa-solid fa-folder-open" aria-hidden="true"></i>Projets et certifications</legend>
+          <details class="entry" open>
+            <summary>Élément 1</summary>
+            <label class="field"><span>Titre</span><input type="text" data-field="titre"></label>
+            <label class="field"><span>Description</span><textarea rows="2" data-field="description"></textarea></label>
+            <label class="field"><span>Lien (URL, facultatif)</span><input type="url" data-field="lien" placeholder="https://…"></label>
+            <button type="button" class="btn btn--danger btn--sm" data-action="remove"><i class="fa-solid fa-trash" aria-hidden="true"></i>Supprimer</button>
+          </details>
+          <details class="entry">
+            <summary>Élément 2</summary>
+            <label class="field"><span>Titre</span><input type="text" data-field="titre"></label>
+            <label class="field"><span>Description</span><textarea rows="2" data-field="description"></textarea></label>
+            <label class="field"><span>Lien (URL, facultatif)</span><input type="url" data-field="lien" placeholder="https://…"></label>
+            <button type="button" class="btn btn--danger btn--sm" data-action="remove"><i class="fa-solid fa-trash" aria-hidden="true"></i>Supprimer</button>
+          </details>
+          <button type="button" class="btn btn--add" data-action="add" data-target="projets"><i class="fa-solid fa-plus" aria-hidden="true"></i>Ajouter un élément</button>
+        </fieldset>
+
+        <fieldset class="panel">
+          <legend><i class="fa-solid fa-signature" aria-hidden="true"></i>Pied de page</legend>
+          <label class="field"><span>Phrase professionnelle / disponibilité</span><input type="text" data-field="pied" placeholder="Ex. Disponible à partir de septembre"></label>
+        </fieldset>
+      </form>
+    </aside>
+
+    <!-- ================= APERÇU DU CV (droite) ================= -->
+    <section class="preview" id="apercu" aria-label="Aperçu du CV">
+      <nav class="toc" aria-label="Sections du CV">
+        <a href="#profil">Profil</a><a href="#competences">Compétences</a><a href="#experiences">Expériences</a><a href="#formations">Formations</a><a href="#projets">Projets</a>
+      </nav>
+      <article class="sheet" id="cv">
+
+        <header class="hero" id="profil">
+          <div class="hero__deco" aria-hidden="true"></div>
+          <div class="hero__inner">
+            <div class="avatar" role="img" aria-label="Emplacement de la photo de profil" data-out-photo="photo">
+              <i class="fa-solid fa-user" aria-hidden="true"></i>
+            </div>
+
+            <div class="hero__text">
+              <p class="hero__kicker">Curriculum vitæ</p>
+              <h1 data-out="nom">[Votre nom et prénom]</h1>
+              <p class="hero__title" data-out="specialite">[Votre spécialité]</p>
+              <p class="hero__about" data-out="presentation">[Rédigez ici une courte présentation personnelle : votre parcours, vos objectifs et ce qui vous distingue.]</p>
+            </div>
+
+            <address class="contact">
+              <ul>
+                <li><i class="fa-solid fa-envelope" aria-hidden="true"></i><a href="mailto:votre.email@exemple.com" data-out="email" data-out-href="email">[Votre adresse e-mail]</a></li>
+                <li><i class="fa-solid fa-phone" aria-hidden="true"></i><a href="tel:+000000000000" data-out="telephone" data-out-href="telephone">[Votre numéro de téléphone]</a></li>
+                <li><i class="fa-solid fa-location-dot" aria-hidden="true"></i><span data-out="ville">[Votre ville, pays]</span></li>
+                <li><i class="fa-brands fa-linkedin" aria-hidden="true"></i><a href="https://www.linkedin.com/" target="_blank" rel="noopener noreferrer" data-out="linkedin" data-out-href="linkedin">[Votre profil LinkedIn]</a></li>
+                <li><i class="fa-brands fa-github" aria-hidden="true"></i><a href="https://github.com/" target="_blank" rel="noopener noreferrer" data-out="github" data-out-href="github">[Votre profil GitHub]</a></li>
+                <li><i class="fa-solid fa-globe" aria-hidden="true"></i><a href="https://exemple.com/" target="_blank" rel="noopener noreferrer" data-out="portfolio" data-out-href="portfolio">[Votre portfolio]</a></li>
+              </ul>
+            </address>
+          </div>
+        </header>
+
+        <div class="sheet__body">
+
+          <section class="section" id="competences" aria-labelledby="t-competences">
+            <h2 id="t-competences">
+              <i class="fa-solid fa-code" aria-hidden="true"></i>
+              Compétences</h2>
+            <div class="grid">
+              <article class="card">
+                <h3><i class="fa-solid fa-gears" aria-hidden="true"></i>Compétences techniques</h3>
+                <ul class="badges" data-out-badges="competences-techniques"><li>[Compétence technique 1]</li><li>[Compétence technique 2]</li><li>[Compétence technique 3]</li></ul>
+              </article>
+              <article class="card">
+                <h3><i class="fa-solid fa-terminal" aria-hidden="true"></i>Langages de programmation</h3>
+                <ul class="badges" data-out-badges="langages"><li>[Langage 1]</li><li>[Langage 2]</li><li>[Langage 3]</li></ul>
+              </article>
+              <article class="card">
+                <h3><i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>Frameworks et outils</h3>
+                <ul class="badges" data-out-badges="outils"><li>[Framework ou outil 1]</li><li>[Framework ou outil 2]</li><li>[Framework ou outil 3]</li></ul>
+              </article>
+              <article class="card">
+                <h3><i class="fa-solid fa-database" aria-hidden="true"></i>Bases de données</h3>
+                <ul class="badges" data-out-badges="bases"><li>[Base de données 1]</li><li>[Base de données 2]</li></ul>
+              </article>
+              <article class="card">
+                <h3><i class="fa-solid fa-people-group" aria-hidden="true"></i>Compétences transversales</h3>
+                <ul class="badges" data-out-badges="transversales"><li>[Compétence transversale 1]</li><li>[Compétence transversale 2]</li><li>[Compétence transversale 3]</li></ul>
+              </article>
+              <article class="card">
+                <h3><i class="fa-solid fa-language" aria-hidden="true"></i>Langues</h3>
+                <ul class="badges" data-out-badges="langues"><li>[Langue 1 – niveau]</li><li>[Langue 2 – niveau]</li></ul>
+              </article>
+              <article class="card">
+                <h3><i class="fa-solid fa-star" aria-hidden="true"></i>Autres compétences</h3>
+                <ul class="badges" data-out-badges="autres"><li>[Votre compétence 1]</li><li>[Votre compétence 2]</li></ul>
+              </article>
+            </div>
+          </section>
+
+          <section class="section" id="experiences" aria-labelledby="t-experiences">
+            <h2 id="t-experiences"><i class="fa-solid fa-briefcase" aria-hidden="true"></i>Expériences professionnelles</h2>
+            <button type="button" class="toggle-all" data-action="toggle-all" data-target="experiences">Tout déplier</button>
+            <ol class="timeline" data-preview-list="experiences">
+              <li class="timeline__item">
+                <article class="card">
+                  <p class="meta-date"><i class="fa-regular fa-calendar" aria-hidden="true"></i><span data-out="periode">[Mois/Année – Mois/Année]</span></p>
+                  <h3 data-out="poste">[Votre poste]</h3>
+                  <p class="meta-org"><span><i class="fa-solid fa-building" aria-hidden="true"></i><span data-out="entreprise">[Nom de l'entreprise]</span></span> <span><i class="fa-solid fa-location-dot" aria-hidden="true"></i><span data-out="lieu">[Ville ou pays]</span></span></p>
+                  <details class="more"><summary>Voir les détails</summary><p data-out="description">[Décrivez vos missions et responsabilités]</p><p class="achievements"><strong>Réalisations :</strong> <span data-out="realisations">[Présentez vos résultats ou projets]</span></p></details>
+                </article>
+              </li>
+              <li class="timeline__item">
+                <article class="card">
+                  <p class="meta-date"><i class="fa-regular fa-calendar" aria-hidden="true"></i><span data-out="periode">[Mois/Année – Mois/Année]</span></p>
+                  <h3 data-out="poste">[Votre poste]</h3>
+                  <p class="meta-org"><span><i class="fa-solid fa-building" aria-hidden="true"></i><span data-out="entreprise">[Nom de l'entreprise]</span></span> <span><i class="fa-solid fa-location-dot" aria-hidden="true"></i><span data-out="lieu">[Ville ou pays]</span></span></p>
+                  <details class="more"><summary>Voir les détails</summary><p data-out="description">[Décrivez vos missions et responsabilités]</p><p class="achievements"><strong>Réalisations :</strong> <span data-out="realisations">[Présentez vos résultats ou projets]</span></p></details>
+                </article>
+              </li>
+            </ol>
+          </section>
+
+          <section class="section" id="formations" aria-labelledby="t-formations">
+            <h2 id="t-formations"><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i>Formations</h2>
+            <div class="grid grid--2" data-preview-list="formations">
+              <article class="card card--edu">
+                <p class="meta-date"><i class="fa-regular fa-calendar" aria-hidden="true"></i><span data-out="annees">[Année de début – Année de fin]</span></p>
+                <h3 data-out="diplome">[Diplôme ou formation]</h3>
+                <p class="meta-org"><span><i class="fa-solid fa-school" aria-hidden="true"></i><span data-out="etablissement">[Établissement]</span></span> <span><i class="fa-solid fa-location-dot" aria-hidden="true"></i><span data-out="ville-formation">[Ville]</span></span></p>
+                <details class="more"><summary>Voir les détails</summary><p data-out="description">[Description ou spécialisation]</p></details>
+              </article>
+              <article class="card card--edu">
+                <p class="meta-date"><i class="fa-regular fa-calendar" aria-hidden="true"></i><span data-out="annees">[Année de début – Année de fin]</span></p>
+                <h3 data-out="diplome">[Diplôme ou formation]</h3>
+                <p class="meta-org"><span><i class="fa-solid fa-school" aria-hidden="true"></i><span data-out="etablissement">[Établissement]</span></span> <span><i class="fa-solid fa-location-dot" aria-hidden="true"></i><span data-out="ville-formation">[Ville]</span></span></p>
+                <details class="more"><summary>Voir les détails</summary><p data-out="description">[Description ou spécialisation]</p></details>
+              </article>
+            </div>
+          </section>
+
+          <section class="section" id="projets" aria-labelledby="t-projets">
+            <h2 id="t-projets"><i class="fa-solid fa-folder-open" aria-hidden="true"></i>Projets et certifications</h2>
+            <div class="grid" data-preview-list="projets">
+              <article class="card">
+                <h3 data-out="titre">[Titre du projet ou de la certification]</h3>
+                <details class="more"><summary>Voir les détails</summary><p data-out="description">[Courte description]</p></details>
+                <p><a class="link-more" href="https://exemple.com/" target="_blank" rel="noopener noreferrer" data-out-href="lien"><span data-out="lien">[Lien]</span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></p>
+              </article>
+              <article class="card">
+                <h3 data-out="titre">[Titre du projet ou de la certification]</h3>
+                <details class="more"><summary>Voir les détails</summary><p data-out="description">[Courte description]</p></details>
+                <p><a class="link-more" href="https://exemple.com/" target="_blank" rel="noopener noreferrer" data-out-href="lien"><span data-out="lien">[Lien]</span><i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i></a></p>
+              </article>
+            </div>
+          </section>
+        </div>
+
+        <footer class="sheet__footer">
+          <p data-out="pied">[Votre phrase professionnelle ou mention de disponibilité]</p>
+        </footer>
+      </article>
+    </section>
+  </div>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
