@@ -13,11 +13,11 @@
   <a class="skip-link" href="#apercu">Aller à l'aperçu du CV</a>
 
   <header class="app-bar">
-    <p class="brand"><i class="fa-solid fa-file-lines" aria-hidden="true"></i><span>Générateur de CV</span></p>
+    <h1 class="brand"><i class="fa-solid fa-file-lines" aria-hidden="true"></i><span>Générateur de CV</span></h1>
     <div class="app-bar__actions">
       <button type="button" class="btn btn--ghost" data-action="theme" aria-label="Basculer entre thème clair et sombre"><i class="fa-solid fa-moon theme-moon" aria-hidden="true"></i><i class="fa-solid fa-sun theme-sun" aria-hidden="true"></i></button>
-      <button name="reset" type="reset" class="btn btn--ghost" data-action="reset"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i><span>Réinitialiser</span></button>
-      <button name="print" type="submit" class="btn btn--primary" data-action="print"><i class="fa-solid fa-print" aria-hidden="true"></i><span>Imprimer / PDF</span></button>
+      <button name="reset" type="reset" class="btn btn--ghost" data-action="reset" aria-label="Réinitialiser le formulaire"><i class="fa-solid fa-rotate-left" aria-hidden="true"></i><span>Réinitialiser</span></button>
+      <button name="print" type="submit" class="btn btn--primary" data-action="print" aria-label="Imprimer ou enregistrer en PDF"><i class="fa-solid fa-print" aria-hidden="true"></i><span>Imprimer / PDF</span></button>
     </div>
   </header>
 
@@ -29,7 +29,7 @@
     <label for="vue-apercu"><i class="fa-solid fa-eye"></i>Aperçu</label>
   </div>
 
-  <div class="app">
+  <main class="app">
 
     <!-- ================= FORMULAIRE (gauche) ================= -->
     <aside class="editor" aria-label="Formulaire de saisie du CV">
@@ -171,7 +171,7 @@
 
             <div class="hero__text">
               <p class="hero__kicker">Curriculum vitæ</p>
-              <h1 data-out="nom">[Votre nom et prénom]</h1>
+              <h2 class="hero__name" data-out="nom">[Votre nom et prénom]</h2>
               <p class="hero__title" data-out="specialite">[Votre spécialité]</p>
               <p class="hero__about" data-out="presentation">[Rédigez ici une courte présentation personnelle : votre parcours, vos objectifs et ce qui vous distingue.]</p>
             </div>
@@ -290,7 +290,7 @@
         </footer>
       </article>
     </section>
-  </div>
+  </main>
 
   <script src="script.js" defer></script>
 </body>
