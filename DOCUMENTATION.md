@@ -24,6 +24,8 @@ Le formulaire et l'aperçu sont reliés **uniquement par des attributs `data-*`*
 | `data-action="remove"` | `<button>` dans une `.entry` | Supprime l'entrée (ou la vide s'il n'en reste qu'une). |
 | `data-action="print"` | `<button>` | Appelle `window.print()`. |
 | `data-action="reset"` | `<button>` | Efface formulaire et sauvegarde (après confirmation). |
+| `data-action="theme"` | `<button>` | Bascule le thème clair / sombre (voir §3, Thème). |
+| `data-action="toggle-all"` + `data-target="id"` | `<button>` | Ouvre ou ferme tous les `details.more` de la section `#id`. |
 
 ### Côté aperçu
 
@@ -31,7 +33,9 @@ Le formulaire et l'aperçu sont reliés **uniquement par des attributs `data-*`*
 |---|---|
 | `data-out="clé"` | Le texte de l'élément est remplacé par la valeur du champ. Si le champ est vide, le texte d'origine (placeholder `[...]`) est restauré. |
 | `data-out-href="clé"` | Met à jour le `href` du lien (voir `hrefFor`). Si la valeur est invalide ou vide, le `href` d'origine est conservé. |
-| `data-out-badges="clé"` | Liste `<ul>` : la valeur est découpée sur les virgules, un `<li>` est créé par élément. |
+| `data-out-badges="clé"` | Liste `<ul>` : la valeur est découpée sur les virgules, un `<li>` est créé par élément. La syntaxe `Nom:80` (ou `Nom:80%`) crée un `<li class="lvl">` avec la variable CSS `--lvl` (0-100) pour la barre de niveau. |
+| `details.more` | Bloc « Voir les détails » dépliable (natif) dans les expériences, formations et projets. |
+| `.is-empty` | Ajoutée automatiquement aux éléments sans valeur saisie ; masquée à l'impression. |
 | `data-out-photo` | Conteneur de la photo (avatar). |
 | `data-preview-list="nom"` | Conteneur dont les enfants sont clonés/supprimés pour suivre le nombre d'entrées de la liste `nom`. Le premier enfant sert de modèle. |
 
@@ -83,9 +87,10 @@ Les modèles (`template`) sont **clonés au chargement**, avant tout remplissage
 ### Rendu
 
 - `fillScope(scope, data, topLevel)` : applique `data-out`, `data-out-href` et `data-out-badges` dans `scope`. Le texte d'origine est mémorisé (`dataset.def`, `dataset.defHref`, `dataset.defBadges`) pour être restauré quand un champ est vidé. Avec `topLevel = true`, les éléments situés dans une liste d'aperçu sont ignorés (ils sont traités par `renderLists`). Le contenu est écrit via `textContent` : pas d'injection HTML.
+- `markEmpty()` : voir « Détails dépliables et timeline ».
 - `renderPhoto()` : affiche l'image (avec `alt` personnalisé) ou restaure l'avatar par défaut avec ses attributs ARIA.
 - `renderLists(state)` : ajuste le nombre d'enfants de chaque liste d'aperçu (clonage du modèle ou suppression) puis remplit chaque ligne.
-- `render()` : enchaîne `fillScope`, `renderPhoto`, `renderLists` et renvoie l'état.
+- `render()` : enchaîne `fillScope`, `renderPhoto`, `renderLists`, `markEmpty` et renvoie l'état.
 
 ### Sauvegarde
 
@@ -115,9 +120,27 @@ Les modèles (`template`) sont **clonés au chargement**, avant tout remplissage
 | `input` sur le formulaire | `render()` + `scheduleSave()` (champ fichier ignoré). |
 | `change` sur le formulaire | Si champ fichier : `handlePhoto`. |
 | `submit` sur le formulaire | `preventDefault()`. |
-| `click` sur le document | Délégation : traite `data-action` = `add`, `remove`, `print`, `reset`. |
+| `click` sur le document | Délégation : traite `data-action` = `add`, `remove`, `toggle-all`, `theme`, `print`, `reset`. |
+| `beforeprint` / `afterprint` sur `window` | Ouvre puis restaure les `details.more`. |
 
 Les clics sont écoutés au niveau du document (délégation), donc les entrées créées dynamiquement fonctionnent sans ré-attacher d'écouteurs.
+
+### Thème
+
+- Initialisation : un script inline dans le `<head>` de `index.html` pose `document.documentElement.dataset.theme` (attribut `data-theme` de `<html>`) avant l'affichage, pour éviter un flash. Ordre de priorité : `localStorage['cv-theme']`, puis `prefers-color-scheme`, puis `light`.
+- Bascule : le clic sur `data-action="theme"` inverse `dataset.theme` et l'enregistre avec `localStorage.setItem('cv-theme', …)`. Le CSS réagit via les sélecteurs `[data-theme="dark"]`.
+
+### Détails dépliables et timeline
+
+- `toggle-all` : si au moins un `details.more` de la section est fermé, tous s'ouvrent ; sinon tous se ferment. Le libellé du bouton devient « Tout replier » / « Tout déplier ».
+- `beforeprint` / `afterprint` : les `details.more` fermés sont ouverts avant l'impression puis refermés ensuite (un `<details>` fermé masquerait son contenu).
+- `markEmpty()` : ajoute `.is-empty` aux blocs de l'aperçu sans valeur saisie (contacts, cartes, sections, pied de page, méta, etc.) ; appelée par `render()`.
+- La timeline est du HTML + CSS (voir §5) ; le JS ne fait que cloner les entrées via `renderLists`.
+
+### Compétences : filtres et barres de niveau
+
+- Au chargement, une barre `.filters` est générée avant `#competences .grid` : un bouton « Tout » plus un bouton par catégorie (titre `h3` de chaque carte). `aria-pressed` indique le filtre actif ; les autres cartes reçoivent `hidden`.
+- Un `IntersectionObserver` (seuil 0,3) ajoute la classe `.seen` à la carte quand elle devient visible, ce qui anime les barres (`--lvl`). La classe est posée sur la carte (nœud stable) pour que l'animation ne se rejoue pas à chaque frappe. Sans `IntersectionObserver`, `.seen` est ajoutée directement.
 
 ### Initialisation
 
@@ -128,7 +151,7 @@ render();
 
 ## 4. Format de sauvegarde
 
-Clé `localStorage` : `cv-interactif-v1`.
+Clé `localStorage` : `cv-interactif-v1`. Le thème est stocké à part, dans `cv-theme` (`"light"` ou `"dark"`).
 
 ```json
 {
@@ -159,8 +182,8 @@ Le fichier est organisé en sections numérotées :
 7. CV : en-tête (`.hero`, `.avatar`, `.contact`)
 8. CV : sections et cartes (`.section`, `.card`, `.grid`)
 9. Badges
-10. Timeline (CSS uniquement)
-11. Pied de CV
+10. Timeline interactive : ligne (`border-left`), points (`::before`), détails dépliables `.more`, `:has(.more[open])`, filtres `.filters`, sommaire `.toc`
+11. Pied de CV (thème sombre : sélecteurs `[data-theme="dark"]`)
 12. Animations
 13. Responsive (`40em`, `52em`, `64em`, `79em`)
 14. Mouvement réduit (`prefers-reduced-motion`)
@@ -184,7 +207,7 @@ Aucun changement JavaScript n'est nécessaire.
 
 ## 7. Points d'attention connus
 
-- **Double chargement du script** : [index.html](index.html) inclut `script.js` deux fois, à la ligne 10 (dans le `<head>`, sans `defer`) et à la ligne 287 (avec `defer`). Le premier chargement s'exécute avant que le DOM existe et provoque une erreur console (`form` est `null`) ; le second fonctionne normalement. Il suffit de supprimer la ligne 10 ou d'y ajouter `defer` et de supprimer la ligne 287.
+- **Script de thème dans le `<head>`** : le petit script inline (ligne 10) doit rester avant le rendu et sans `defer`, sinon la page clignote en thème clair. `script.js` est chargé une seule fois, en fin de `<body>` avec `defer`.
 - Les boutons `reset` et `print` de la barre d'application sont déclarés `type="reset"` / `type="submit"` mais ne sont pas dans un `<form>` : seul `data-action` est utilisé.
 - Les icônes dépendent du CDN Font Awesome ; hors connexion elles ne s'affichent pas.
 - La photo est stockée en base64 dans `localStorage` (limite d'environ 5 Mo selon le navigateur) ; le redimensionnement à 400 px limite ce risque.
