@@ -9,6 +9,10 @@ function val($a, $k) { return trim($a[$k] ?? ''); }
 
 function cv_pdf(array $cv) {
   $f = $cv['fields'] ?? []; $L = $cv['lists'] ?? [];
+  // Statut « hidden » choisi par l'utilisateur : champs simples dans $cv['status'], entrées de liste dans leur 'status'
+  $hid = is_array($cv['status'] ?? null) ? $cv['status'] : [];
+  $off = function ($k) use ($hid) { return !in_array($k, ['nom', 'telephone', 'specialite', 'email'], true) && ($hid[$k] ?? '') === 'hidden'; }; // ces 4 champs sont obligatoires
+  $v = function ($k) use ($f, $off) { return $off($k) ? '' : val($f, $k); };
 
   // « Nom:80 » devient « Nom · 80 % », comme dans l'aperçu
   $badges = function ($k) use ($f) {
@@ -24,17 +28,17 @@ function cv_pdf(array $cv) {
   $line = function ($parts) { $p = array_filter(array_map('trim', $parts)); return $p ? '<div class="meta">' . h(implode(' – ', $p)) . '</div>' : ''; };
 
   $contact = [];
-  foreach (['email', 'telephone', 'ville', 'linkedin', 'github', 'portfolio'] as $k) if (val($f, $k) !== '') $contact[] = h(val($f, $k));
+  foreach (['email', 'telephone', 'ville', 'linkedin', 'github', 'portfolio'] as $k) if ($v($k) !== '') $contact[] = h($v($k));
 
   $skillTitles = ['competences-techniques' => 'Compétences techniques', 'langages' => 'Langages de programmation', 'outils' => 'Frameworks et outils',
     'bases' => 'Bases de données', 'transversales' => 'Compétences transversales', 'langues' => 'Langues', 'autres' => 'Autres compétences'];
   $skills = '';
-  foreach ($skillTitles as $k => $t) if ($b = $badges($k)) $skills .= '<p><b>' . h($t) . ' :</b> ' . implode(' &nbsp;•&nbsp; ', $b) . '</p>';
+  foreach ($skillTitles as $k => $t) if (!$off($k) && ($b = $badges($k))) $skills .= '<p><b>' . h($t) . ' :</b> ' . implode(' &nbsp;•&nbsp; ', $b) . '</p>';
 
   // Listes répétables : les entrées entièrement vides sont ignorées
   $items = function ($name, $render) use ($L) {
     $html = '';
-    foreach ($L[$name] ?? [] as $e) if (array_filter($e, function ($v) { return trim($v) !== ''; })) $html .= $render($e);
+    foreach ($L[$name] ?? [] as $e) if (($e['status'] ?? '') !== 'hidden' && array_filter($e, function ($v) { return trim($v) !== ''; })) $html .= $render($e);
     return $html;
   };
   $exp = $items('experiences', function ($e) use ($line, $para) {
@@ -52,7 +56,7 @@ function cv_pdf(array $cv) {
   });
 
   // Photo : data URL validée uniquement (jamais d'URL externe, donc pas de SSRF)
-  $photo = preg_match('#^data:image/(jpeg|png);base64,[A-Za-z0-9+/=]+$#', $cv['photo'] ?? '') ? '<img class="photo" src="' . $cv['photo'] . '">' : '';
+  $photo = !$off('photo') && preg_match('#^data:image/(jpeg|png);base64,[A-Za-z0-9+/=]+$#', $cv['photo'] ?? '') ? '<img class="photo" src="' . $cv['photo'] . '">' : '';
 
   $html = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><style>
     @page { margin: 0 }
@@ -74,14 +78,28 @@ function cv_pdf(array $cv) {
     .foot { text-align: center; color: #4a5273; font-size: 9pt; padding: 0 36px 20px }
   </style></head><body>
   <div class="hero"><table width="100%"><tr>' . ($photo ? '<td width="110">' . $photo . '</td>' : '') . '<td>
-    <p class="kicker">Curriculum vitæ</p><div class="name">' . h(val($f, 'nom') ?: 'Votre nom') . '</div>
-    <p class="title">' . h(val($f, 'specialite')) . '</p>' . $para(val($f, 'presentation')) . '
+    <p class="kicker">Curriculum vitæ</p><div class="name">' . ($off('nom') ? '' : h(val($f, 'nom') ?: 'Votre nom')) . '</div>
+    <p class="title">' . h($v('specialite')) . '</p>' . $para($v('presentation')) . '
     <p class="contact">' . implode(' &nbsp;|&nbsp; ', $contact) . '</p></td></tr></table></div>
   <div class="body">' . $section('Compétences', $skills) . $section('Expériences professionnelles', $exp)
     . $section('Formations', $edu) . $section('Projets et certifications', $proj) . '</div>'
-    . (val($f, 'pied') !== '' ? '<div class="foot">' . h(val($f, 'pied')) . '</div>' : '') . '</body></html>';
+    . ($v('pied') !== '' ? '<div class="foot">' . h($v('pied')) . '</div>' : '') . '</body></html>';
 
   $pdf = new Dompdf(['isRemoteEnabled' => false, 'chroot' => __DIR__]);
   $pdf->loadHtml($html); $pdf->setPaper('A4'); $pdf->render();
+  // Métadonnées du PDF (visibles dans les propriétés du fichier et lues par les logiciels de recrutement)
+  $nom = val($f, 'nom');
+  $pdf->addInfo('Title', $nom !== '' ? 'CV - ' . $nom : 'Curriculum vitae');
+  if ($nom !== '') $pdf->addInfo('Author', $nom);
+  if (val($f, 'specialite') !== '') $pdf->addInfo('Subject', val($f, 'specialite'));
+  $pdf->addInfo('Creator', 'Générateur de CV');
   return $pdf->output();
+}
+
+// Nom de fichier sûr (ASCII) : « CV-Alice-Dupont.pdf », « cv.pdf » si le nom est vide
+function cv_filename(array $cv) {
+  $n = htmlentities(trim($cv['fields']['nom'] ?? ''), ENT_QUOTES, 'UTF-8');
+  $n = preg_replace('/&([a-z])(acute|grave|circ|uml|cedil|tilde|ring);/i', '$1', $n);
+  $n = trim(preg_replace('/[^A-Za-z0-9]+/', '-', $n), '-');
+  return $n !== '' ? 'CV-' . substr($n, 0, 60) . '.pdf' : 'cv.pdf';
 }

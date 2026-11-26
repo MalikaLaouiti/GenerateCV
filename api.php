@@ -39,7 +39,7 @@ if ($a === 'pdf') {
   $s = $db->prepare('SELECT data FROM cv WHERE user_id=?'); $s->execute([$uid]);
   $cv = json_decode($s->fetchColumn() ?: '{}', true) ?: [];
   require __DIR__ . '/cv_pdf.php';
-  header('Content-Type: application/pdf'); header('Content-Disposition: attachment; filename="cv.pdf"');
+  header('Content-Type: application/pdf'); header('Content-Disposition: attachment; filename="' . cv_filename($cv) . '"');
   echo cv_pdf($cv); exit;
 }
 if ($a === 'cv' && $_SERVER['REQUEST_METHOD'] === 'PUT') {
