@@ -6,7 +6,6 @@
 (function () {
   'use strict';
 
-  var STORAGE_KEY = 'cv-interactif-v1';
   var PHOTO_MAX = 400; // px, pour limiter le poids dans localStorage
 
   var form = document.getElementById('cv-form');
@@ -173,13 +172,33 @@
   }
 
   /* ---------- Sauvegarde ---------- */
+  // Le CV est stocké en base PostgreSQL (api.php), un par utilisateur connecté.
+  function api(method, action, body) {
+    return fetch('api.php?a=' + action, { method: method, body: body ? JSON.stringify(body) : undefined })
+      .then(function (r) {
+        if (r.status === 401) { location.href = 'login.html'; return null; }
+        return r.ok ? r.json() : null;
+      }).catch(function () { return null; });
+  }
+  // À chaque frappe : copie locale immédiate (synchrone) ; envoi au serveur quand l'utilisateur s'arrête (1 s).
+  var STORAGE_KEY = 'cv-interactif-v1', DIRTY_KEY = 'cv-interactif-dirty', IDLE_MS = 1000;
+  function store(k, v) { try { v === null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) { /* stockage plein */ } }
+  function push(state, keepalive) {
+    return fetch('api.php?a=cv', { method: 'PUT', body: JSON.stringify(state), keepalive: !!keepalive })
+      .then(function (r) {
+        if (r.status === 401) location.href = 'login.html';
+        else if (r.ok && localStorage.getItem(STORAGE_KEY) === JSON.stringify(state)) store(DIRTY_KEY, null); // synchronisé (sauf frappe survenue pendant l'envoi)
+      }).catch(function () { /* hors ligne : reste « dirty », réessayé au prochain chargement */ });
+  }
   function save(state) {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) { /* stockage indisponible ou plein */ }
-  }
-  function scheduleSave() {
+    store(STORAGE_KEY, JSON.stringify(state));
+    store(DIRTY_KEY, '1');
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(function () { save(readState()); }, 250);
+    saveTimer = setTimeout(function () { push(state); }, IDLE_MS);
   }
+  window.addEventListener('pagehide', function () { // fermeture avant la fin du délai : envoi immédiat
+    if (localStorage.getItem(DIRTY_KEY)) push(readState(), true);
+  });
   function load() {
     try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch (e) { return null; }
   }
@@ -258,8 +277,7 @@
 
   form.addEventListener('input', function (e) {
     if (e.target.type === 'file') return;
-    render();
-    scheduleSave();
+    save(render());
   });
 
   form.addEventListener('change', function (e) {
@@ -299,15 +317,20 @@
       var next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
       document.documentElement.dataset.theme = next;
       try { localStorage.setItem('cv-theme', next); } catch (err) { /* ignoré */ }
+    } else if (action === 'pdf') { // envoie les dernières modifications, puis télécharge le PDF généré par le serveur
+      clearTimeout(saveTimer);
+      push(readState()).then(function () { location.href = 'api.php?a=pdf'; });
     } else if (action === 'print') {
       window.print();
     } else if (action === 'reset') {
       if (!window.confirm('Effacer toutes les informations saisies ?')) return;
-      try { localStorage.removeItem(STORAGE_KEY); } catch (err) { /* ignoré */ }
       form.reset();
       photoData = '';
       Object.keys(formLists).forEach(function (n) { ensureCount(n, formLists[n].initial); });
-      render();
+      save(render());
+    } else if (action === 'logout') {
+      store(STORAGE_KEY, null); store(DIRTY_KEY, null); // la copie locale appartient à l'utilisateur connecté
+      api('POST', 'logout').then(function () { location.href = 'login.html'; });
     }
   });
 
@@ -350,6 +373,10 @@
   window.addEventListener('afterprint', function () { wasOpen.forEach(function (d) { d.open = false; }); });
 
   /* ---------- Initialisation ---------- */
-  applyState(load());
+  applyState(load()); // affichage instantané depuis la copie locale
   render();
+  api('GET', 'cv').then(function (s) {
+    if (localStorage.getItem(DIRTY_KEY)) push(readState()); // modifications locales non envoyées : elles priment
+    else if (s) { applyState(s); store(STORAGE_KEY, JSON.stringify(render())); }
+  });
 })();
