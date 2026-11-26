@@ -42,6 +42,37 @@
     return safeUrl(v);
   }
 
+  /* ---------- Statut « affiché / masqué dans le PDF » ---------- */
+  // Boutons œil injectés ici (le HTML reste simple). État : status 'hidden' (sinon 'view', non stocké).
+  function setVis(btn, hidden) {
+    btn.dataset.status = hidden ? 'hidden' : 'view';
+    btn.setAttribute('aria-pressed', hidden ? 'true' : 'false');
+    var txt = btn.querySelector('span');
+    var msg = hidden ? 'Masqué dans le PDF' : 'Affiché dans le PDF';
+    btn.querySelector('i').className = hidden ? 'fa-regular fa-eye-slash' : 'fa-regular fa-eye';
+    if (txt) txt.textContent = msg;
+    else { btn.title = msg + ' (cliquer pour changer)'; btn.setAttribute('aria-label', btn.title); }
+  }
+  function makeVis(cls, withText) {
+    var b = document.createElement('button');
+    b.type = 'button'; b.className = cls; b.setAttribute('data-action', 'vis');
+    b.innerHTML = '<i aria-hidden="true"></i>' + (withText ? '<span></span>' : '');
+    setVis(b, false);
+    return b;
+  }
+  var REQUIRED = ['nom', 'telephone', 'specialite', 'email']; // toujours dans le PDF : pas de bouton
+  $all(form, '[data-field]').forEach(function (f) { // un œil par champ simple (hors listes)
+    var label = f.closest('label.field');
+    if (!label || inList(f, 'data-list') || REQUIRED.indexOf(f.getAttribute('data-field')) >= 0) return;
+    var b = makeVis('vis', false);
+    b.setAttribute('data-key', f.getAttribute('data-field'));
+    setVis(b, false);
+    label.querySelector(':scope > span').appendChild(b);
+  });
+  $all(form, '.entry').forEach(function (entry) { // un bouton par entrée de liste
+    entry.insertBefore(makeVis('btn btn--add btn--sm vis-entry', true), entry.querySelector('[data-action="remove"]'));
+  });
+
   /* ---------- Modèles (capturés avant tout remplissage) ---------- */
   var formLists = {};   // nom → { el, template, initial, label }
   var previewLists = {}; // nom → { el, template }
@@ -77,10 +108,15 @@
   }
 
   function readState() {
-    var state = { fields: readFields(form, true), lists: {}, photo: photoData };
+    var state = { fields: readFields(form, true), lists: {}, photo: photoData, status: {} };
+    $all(form, '.vis[data-key]').forEach(function (b) {
+      if (b.dataset.status === 'hidden') state.status[b.getAttribute('data-key')] = 'hidden';
+    });
     Object.keys(formLists).forEach(function (name) {
       state.lists[name] = $all(formLists[name].el, ':scope > .entry').map(function (entry) {
-        return readFields(entry, false);
+        var row = readFields(entry, false);
+        if (entry.querySelector('[data-action="vis"]').dataset.status === 'hidden') row.status = 'hidden';
+        return row;
       });
     });
     return state;
@@ -158,7 +194,25 @@
   function markEmpty() {
     avatar.classList.toggle('is-empty', !photoData);
     $all(sheet, '.contact li, .card, .timeline__item, .section, .sheet__footer, .meta-org, .meta-org > span, .meta-date, .achievements, .link-more, .more').forEach(function (u) {
-      u.classList.toggle('is-empty', !u.querySelector('[data-out]:not(.is-empty), [data-out-badges]:not(.is-empty)'));
+      var shown = $all(u, '[data-out]:not(.is-empty), [data-out-badges]:not(.is-empty)').some(function (e) { return !e.closest('.is-off'); });
+      u.classList.toggle('is-empty', !shown);
+    });
+  }
+
+  // Marque (is-off) ce que l'utilisateur a masqué : estompé à l'écran, retiré à l'impression
+  function markOff(state) {
+    $all(sheet, '.is-off').forEach(function (el) { el.classList.remove('is-off'); });
+    Object.keys(state.status).forEach(function (k) {
+      if (state.status[k] !== 'hidden' || !/^[\w-]+$/.test(k)) return;
+      if (k === 'photo') { avatar.classList.add('is-off'); return; }
+      $all(sheet, '[data-out="' + k + '"], [data-out-badges="' + k + '"]').forEach(function (el) {
+        if (!inList(el, 'data-preview-list')) (el.closest('li, .card, .sheet__footer') || el).classList.add('is-off');
+      });
+    });
+    Object.keys(previewLists).forEach(function (name) {
+      (state.lists[name] || []).forEach(function (row, i) {
+        previewLists[name].el.children[i].classList.toggle('is-off', row.status === 'hidden');
+      });
     });
   }
 
@@ -167,6 +221,7 @@
     fillScope(sheet, state.fields, true);
     renderPhoto();
     renderLists(state);
+    markOff(state);
     markEmpty();
     return state;
   }
@@ -237,12 +292,15 @@
       var k = f.getAttribute('data-field');
       if (typeof fields[k] === 'string') f.value = fields[k];
     });
+    var status = state.status || {};
+    $all(form, '.vis[data-key]').forEach(function (b) { setVis(b, status[b.getAttribute('data-key')] === 'hidden'); });
     Object.keys(formLists).forEach(function (name) {
       var rows = (state.lists && state.lists[name]) || null;
       if (!Array.isArray(rows)) return;
       ensureCount(name, Math.max(rows.length, 1));
       $all(formLists[name].el, ':scope > .entry').forEach(function (entry, i) {
         var row = rows[i] || {};
+        setVis(entry.querySelector('[data-action="vis"]'), row.status === 'hidden');
         $all(entry, '[data-field]').forEach(function (f) {
           var v = row[f.getAttribute('data-field')];
           f.value = typeof v === 'string' ? v : '';
@@ -306,7 +364,11 @@
         renumber(listName);
       } else {
         $all(entryEl, 'input, textarea').forEach(function (f) { f.value = ''; });
+        setVis(entryEl.querySelector('[data-action="vis"]'), false);
       }
+      refresh();
+    } else if (action === 'vis') {
+      setVis(btn, btn.dataset.status !== 'hidden');
       refresh();
     } else if (action === 'toggle-all') {
       var ds = $all(document.getElementById(btn.getAttribute('data-target')), 'details.more');
@@ -325,6 +387,7 @@
     } else if (action === 'reset') {
       if (!window.confirm('Effacer toutes les informations saisies ?')) return;
       form.reset();
+      $all(form, '[data-action="vis"]').forEach(function (b) { setVis(b, false); });
       photoData = '';
       Object.keys(formLists).forEach(function (n) { ensureCount(n, formLists[n].initial); });
       save(render());

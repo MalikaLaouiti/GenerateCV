@@ -471,3 +471,12 @@ h3 i { color: var(--violet-600); margin-right: .55rem; }
   #competences .badges li.lvl { border-radius: 0; }
   .sheet__footer { margin-top: 1rem; padding: .6rem 0 0; background: none; color: #000; border-top: 1px solid #999; break-inside: avoid; }
 }
+
+/* Statut affiché / masqué dans le PDF */
+.vis { margin-left: .4rem; padding: .05rem .35rem; font: inherit; color: var(--text-soft); background: none; border: 0; border-radius: 6px; cursor: pointer; }
+.vis:hover { color: var(--violet-600); }
+.vis[data-status="hidden"] { color: var(--danger); }
+.vis-entry { margin: 8px 10px 0; }
+.vis-entry[data-status="hidden"] { color: var(--danger); border-color: #e2b4b0; }
+@media screen { #cv .is-off { opacity: .35; filter: grayscale(1); } }
+@media print { #cv .is-off { display: none !important; } }
